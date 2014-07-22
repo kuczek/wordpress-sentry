@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="Wordpress Sentry" basedir="." default="build:main">
+    <!-- Properties -->
+    <property name="dir.src" value="./"/>
+    <property name="dir.build" value="./build/"/>
+    <property name="dir.build.logs" value="${dir.build}/logs"/>
+
+    <!-- Filesets -->
+    <fileset id="sourcecode" dir="${dir.src}">
+        <include name="**/*.php"/>
+    </fileset>
+
+    <!-- Default target -->
+    <target name="build:main"
+            depends="build:clean, build:prepare, build:check, build:test"
+            description="Run all test and build everything"/>
+
+    <!-- Check target -->
+    <target name="build:check"
+            depends="check:cs, check:md, check:cpd, check:depend"
+            description="Analyzes app code."/>
+
+    <!-- Test target -->
+    <target name="build:test"
+            depends="test:unit"
+            description="Executes all tests.."/>
+
+
+    <!-- Prepare build -->
+    <target name="build:prepare"
+            description="Prepare build">
+        <echo msg="Creating build dirs." />
+        <mkdir dir="${dir.build}" />
+        <mkdir dir="${dir.build.logs}" />
+        <mkdir dir="${dir.build.logs}/phpdepend/" />
+    </target>
+    <!-- Project build clean -->
+    <target name="build:clean" description="Clean up build directories.">
+        <echo msg="Cleaning build directories ..."/>
+        <delete dir="${dir.build.logs}" verbose="true"/>
+    </target>
+
+    <!-- Wordpress code sniffer -->
+    <target name="check:cs" description="Checks coding standard.">
+        <echo msg="Checking coding standard ..."/>
+        <phpcodesniffer standard="WordPress"
+                        showSniffs="true"
+                        showWarnings="true">
+            <fileset refid="sourcecode"/>
+            <formatter type="checkstyle" outfile="${dir.build.logs}/checkstyle.xml"/>
+        </phpcodesniffer>
+    </target>
+
+    <!-- copy/paste detector -->
+    <target name="check:cpd" description="Checks similar code blocks.">
+        <echo msg="Checking similar code blocks ..."/>
+        <phpcpd>
+            <fileset refid="sourcecode"/>
+            <formatter type="pmd" outfile="${dir.build.logs}/pmd-cpd.xml"/>
+        </phpcpd>
+    </target>
+
+    <!-- Mess detector -->
+    <target name="check:md" description="Generate code metrics.">
+        <echo msg="Generating code metrics ..."/>
+        <phpmd rulesets="codesize,unusedcode">
+            <fileset refid="sourcecode"/>
+            <formatter type="xml" outfile="${dir.build.logs}/pmd.xml"/>
+        </phpmd>
+    </target>
+
+    <!-- Code dependency -->
+    <target name="check:depend" description="Checks coupling and dependency.">
+        <echo msg="Checking coupling and dependency ..."/>
+        <phpdepend>
+            <fileset refid="sourcecode"/>
+            <logger type="jdepend-xml" outfile="${dir.build.logs}/phpdepend/jdepend.xml"/>
+            <logger type="jdepend-chart" outfile="${dir.build.logs}/phpdepend/dependencies.svg"/>
+            <logger type="overview-pyramid" outfile="${dir.build.logs}/phpdepend/overview-pyramid.svg"/>
+        </phpdepend>
+    </target>
+
+    <!-- Unit tests -->
+    <target name="test:unit" description="Executes unit tests.">
+        <echo msg="Running unit tests ..."/>
+        <exec command="phpunit --log-junit ${dir.build.logs}/phpunit.xml --coverage-clover ${dir.build.logs.coverage}/clover.xml --coverage-html ${dir.build.logs.coverage}/ -c ${dir.app}"/>
+    </target>
+
+    <!-- For travis -->
+    <target name="build:travis" description="Executing travis tests" depends="build:main">
+        <echo msg="Executing travis tests"/>
+    </target>
+</project>
